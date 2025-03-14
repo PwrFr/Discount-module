@@ -20,6 +20,7 @@ import {
 
 import { ChevronRight, ShoppingCart, Ticket } from 'lucide-react';
 import { Plus, Minus } from 'lucide-react';
+import { toast } from 'sonner';
 
 import WhiteHP from '@/assets/images/8384691-a1-Photoroom.png';
 import BlackHP from '@/assets/images/SONY-1-Photoroom.png';
@@ -30,6 +31,9 @@ import LeatherJacket from '@/assets/images/05479100800-e1.jpg';
 import Perfumes from '@/assets/images/20210736999-e1.jpg';
 import LeatherLoafers from '@/assets/images/12600520800-ult21.jpg';
 import LeatherBelt from '@/assets/images/02823300800-081-e1.jpg';
+
+import { Toaster } from '@/components/ui/sonner';
+
 type Product = {
     id: string;
     image: string;
@@ -192,6 +196,8 @@ function App() {
     };
 
     const [openOffer, setOpenOffer] = useState<boolean>(false);
+    const [openCart, setOpenCart] = useState<boolean>(false);
+    const [openCheckout, setOpenCheckout] = useState<boolean>(false);
 
     // Coupon
     // Fixed amount
@@ -241,7 +247,7 @@ function App() {
     // Ontop
     // Percentage discount by item category
     const onTopAmount = 15;
-    const categoryList = ['Clothing', 'Accessories'];
+    const categoryList = ['Clothing', 'Accessories', 'Electronics'];
     // Discount by points
     const userPoint = 284;
 
@@ -330,22 +336,49 @@ function App() {
         0
     );
 
-    const onCheckout = () => {
-        setCart([]);
-        setSelectedCoupon(undefined);
-        setSelectedOnTop(undefined);
+    const totalPrice = (): number => {
+        if (selectedCoupon == undefined) {
+            return subTotal;
+        }
+        if (selectedOnTop == undefined) {
+            return subTotal - couponDiscount();
+        }
+        return (
+            subTotal - couponDiscount() - onTopDiscount() - seasonalDiscount()
+        );
+    };
+
+    const totalDiscount = () => {
+        if (selectedCoupon == undefined) {
+            return;
+        }
+        if (selectedOnTop == undefined) {
+            return couponDiscount();
+        }
+        return couponDiscount() + onTopDiscount() + seasonalDiscount();
+    };
+
+    const onPlaceOrder = () => {
+        toast.success('Order has been Placed.');
+        setOpenCart(false);
+        setOpenCheckout(false);
+        setTimeout(() => {
+            setCart([]);
+            setSelectedCoupon(undefined);
+            setSelectedOnTop(undefined);
+        }, 500);
     };
 
     return (
         <>
             {/* NavBar */}
             <div className='border-b border-foreground py-3 px-4 lg:px-[10%] flex items-center justify-between fixed top-0 w-full h-16 z-40 shadow'>
-                <div className='absolute h-[63px] backdrop-blur -z-10 left-0'></div>
+                {/* <div className='absolute h-[63px] backdrop-blur -z-10 left-0'></div> */}
                 <h1 className='text-lg font-serif text-primary tracking-[-3.5px]'>
                     DM
                 </h1>
                 {/* Shopping Cart */}
-                <Sheet>
+                <Sheet open={openCart} onOpenChange={setOpenCart}>
                     <SheetTrigger asChild>
                         <Button variant='ghost' className='relative'>
                             <ShoppingCart />
@@ -504,23 +537,17 @@ function App() {
                                     ) : null}
                                     <div className='flex justify-between text-lg text-black font-medium'>
                                         <div>Total</div>
-                                        <span>
-                                            ฿
-                                            {(
-                                                subTotal -
-                                                couponDiscount() -
-                                                onTopDiscount() -
-                                                seasonalDiscount()
-                                            ).toFixed(2)}
-                                        </span>
+                                        <span>฿{totalPrice().toFixed(2)}</span>
                                     </div>
-                                    <Dialog>
+                                    <Dialog
+                                        open={openCheckout}
+                                        onOpenChange={setOpenCheckout}
+                                    >
                                         <DialogTrigger asChild>
                                             <Button
                                                 disabled={cart.length <= 0}
                                                 className='mt-4'
                                                 size={'lg'}
-                                                onClick={onCheckout}
                                             >
                                                 Checkout
                                             </Button>
@@ -528,14 +555,86 @@ function App() {
                                         <DialogContent>
                                             <DialogHeader>
                                                 <DialogTitle>
-                                                    Are you absolutely sure?
+                                                    Checkout
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    This action cannot be
-                                                    undone. This will
-                                                    permanently delete your
-                                                    account and remove your data
-                                                    from our servers.
+                                                    <ul className='grid gap-2 my-4'>
+                                                        {cartWithDetails.map(
+                                                            (product) => (
+                                                                <li
+                                                                    className='rounded-lg flex overflow-clip bg-white'
+                                                                    key={
+                                                                        product.id
+                                                                    }
+                                                                >
+                                                                    <img
+                                                                        src={
+                                                                            product.image
+                                                                        }
+                                                                        alt=''
+                                                                        className='w-24 h-24 object-cover'
+                                                                    />
+                                                                    <div className='flex flex-col justify-between flex-1 py-2 px-3'>
+                                                                        <div className='leading-2'>
+                                                                            <h1 className='text-lg font-medium text-black'>
+                                                                                {
+                                                                                    product.name
+                                                                                }
+                                                                            </h1>
+                                                                            <small>
+                                                                                {
+                                                                                    product.category
+                                                                                }
+                                                                            </small>
+                                                                        </div>
+                                                                        <div className='flex justify-between'>
+                                                                            <p>
+                                                                                {
+                                                                                    product.price
+                                                                                }
+                                                                                {
+                                                                                    product.currency
+                                                                                }
+                                                                            </p>
+                                                                            <p>
+                                                                                x
+                                                                                {
+                                                                                    product.amount
+                                                                                }
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </li>
+                                                            )
+                                                        )}
+                                                    </ul>
+                                                    <div className='flex items-center justify-end gap-2'>
+                                                        <div className='flex items-center gap-2'>
+                                                            <div className='grid text-right'>
+                                                                <h1 className='text-base text-black leading-4'>
+                                                                    {totalPrice().toFixed(
+                                                                        2
+                                                                    )}
+                                                                    ฿
+                                                                </h1>
+                                                                {selectedCoupon ? (
+                                                                    <small className='text-red-600 opacity-80'>
+                                                                        You
+                                                                        saved{' '}
+                                                                        {totalDiscount()}
+                                                                        ฿
+                                                                    </small>
+                                                                ) : null}
+                                                            </div>
+                                                            <Button
+                                                                onClick={
+                                                                    onPlaceOrder
+                                                                }
+                                                            >
+                                                                Place Order
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 </DialogDescription>
                                             </DialogHeader>
                                         </DialogContent>
@@ -691,7 +790,18 @@ function App() {
                         </div>
                     ))}
                 </div>
+                <div className='col-span-3 h-12 backdrop-blur sticky bottom-0 z-10 flex items-center justify-center'></div>
             </div>
+            <div className='border-t border-foreground py-3 px-4 lg:px-[10%] flex items-center justify-between fixed bottom-0 w-full h-12 z-40 shadow'>
+                <a href='https://github.com/PwrFr' target='_blank'>
+                    Create & Design By{' '}
+                    <span className='text-[#ee801e]'> PwrFr</span>
+                </a>
+            </div>
+            {/* <div className='fixed bottom-0  backdrop-blur-sm w-full text-right px-4 z-50 border-t border-foreground'>
+              
+            </div> */}
+            <Toaster />
         </>
     );
 }
